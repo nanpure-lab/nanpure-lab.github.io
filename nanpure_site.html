@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ナンプレ生成サイト</title>
+
+  <style>
+    body {
+      margin: 0;
+      background-color: #dff6ff;
+      font-family: sans-serif;
+      text-align: center;
+    }
+
+    header {
+      text-align: center;
+      padding: 30px 0 10px;
+    }
+
+    h1 {
+      margin: 0;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      padding: 20px;
+    }
+
+    section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h2 {
+      margin-bottom: 15px;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-bottom: 15px;
+    }
+
+    td {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      text-align: center;
+      vertical-align: middle;
+      border: 1px solid #555;
+      font-size: 20px;
+      background-color: white;
+      box-sizing: border-box;
+    }
+
+    td:nth-child(3),
+    td:nth-child(6) {
+      border-right: 3px solid #333;
+    }
+
+    td:nth-child(1) {
+      border-left: 3px solid #333;
+    }
+
+    td:nth-child(9) {
+      border-right: 3px solid #333;
+    }
+
+    tr:nth-child(3) td,
+    tr:nth-child(6) td {
+      border-bottom: 3px solid #333;
+    }
+
+    tr:nth-child(1) td {
+      border-top: 3px solid #333;
+    }
+
+    tr:nth-child(9) td {
+      border-bottom: 3px solid #333;
+    }
+
+    button {
+      padding: 8px 24px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>ナンプレ生成サイト</h1>
+  </header>
+
+  <main>
+    <section>
+      <h2>問題</h2>
+      <table aria-label="ナンプレ問題">
+        <tbody id="problem-grid"></tbody>
+      </table>
+      <button type="button" id="generate-button">生成</button>
+    </section>
+
+    <section>
+      <h2>答え</h2>
+      <table aria-label="ナンプレの答え">
+        <tbody id="answer-grid"></tbody>
+      </table>
+      <button type="button" id="answer-button">こたえ</button>
+    </section>
+  </main>
+
+  <script>
+    function ireruka(board, row, col, num) {
+      for (let i = 0; i < 9; i++) {
+        if (board[row][i] === num || board[i][col] === num) {
+          return false;
+        }
+      }
+
+      const startRow = Math.floor(row / 3) * 3;
+      const startCol = Math.floor(col / 3) * 3;
+
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          if (board[startRow + i][startCol + j] === num) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
+    function kotaeKazoeru(board, limit = 2) {
+      let emptyCell = null;
+
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          if (board[r][c] === 0) {
+            emptyCell = [r, c];
+            break;
+          }
+        }
+
+        if (emptyCell !== null) {
+          break;
+        }
+      }
+
+      if (emptyCell === null) {
+        return 1;
+      }
+
+      const [row, col] = emptyCell;
+      let count = 0;
+
+      for (let num = 1; num < 10; num++) {
+        if (ireruka(board, row, col, num)) {
+          board[row][col] = num;
+
+          count += kotaeKazoeru(board, limit);
+
+          board[row][col] = 0;
+
+          if (count >= limit) {
+            return count;
+          }
+        }
+      }
+
+      return count;
+    }
+
+    function backtrackingSiteruyo(board) {
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          if (board[row][col] === 0) {
+            for (let num = 1; num < 10; num++) {
+              if (ireruka(board, row, col, num)) {
+                board[row][col] = num;
+
+                if (backtrackingSiteruyo(board)) {
+                  return true;
+                }
+
+                board[row][col] = 0;
+              }
+            }
+
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
+    function barabarani(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+
+      return array;
+    }
+
+    function kanseiBanmenTsukuru() {
+      const board = Array.from(
+        { length: 9 },
+        () => Array(9).fill(0)
+      );
+
+      for (let block = 0; block < 9; block += 3) {
+        const nums = barabarani([
+          1, 2, 3, 4, 5, 6, 7, 8, 9
+        ]);
+
+        for (let i = 0; i < 3; i++) {
+          for (let j = 0; j < 3; j++) {
+            board[block + i][block + j] = nums.pop();
+          }
+        }
+      }
+
+      backtrackingSiteruyo(board);
+
+      return board;
+    }
+
+    function banmenKopuru(board) {
+      return board.map(row => [...row]);
+    }
+
+    function mondaiTsukuru(board, holes = 40) {
+      const puzzle = banmenKopuru(board);
+
+      const cell = [];
+
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          cell.push([r, c]);
+        }
+      }
+
+      barabarani(cell);
+
+      let count = 0;
+
+      for (const [row, col] of cell) {
+        if (count >= holes) {
+          break;
+        }
+
+        const backup = puzzle[row][col];
+        puzzle[row][col] = 0;
+
+        const tempBoard = banmenKopuru(puzzle);
+
+        if (kotaeKazoeru(tempBoard, 2) === 1) {
+          count++;
+        } else {
+          puzzle[row][col] = backup;
+        }
+      }
+
+      console.log(
+        `実際に開けられた穴の数 ${count} / 目標: ${holes}`
+      );
+
+      return puzzle;
+    }
+
+    function banmenHyouji(targetId, board) {
+      const tbody = document.getElementById(targetId);
+      tbody.innerHTML = "";
+
+      board.forEach(row => {
+        const tr = document.createElement("tr");
+
+        row.forEach(value => {
+          const td = document.createElement("td");
+
+          if (value !== 0) {
+            td.textContent = value;
+          }
+
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    let currentPuzzle = null;
+    let currentAnswer = null;
+
+    function atarashiiMondai() {
+      const fullBoard = kanseiBanmenTsukuru();
+      const puzzle = mondaiTsukuru(fullBoard, 80);
+
+      currentAnswer = fullBoard;
+      currentPuzzle = puzzle;
+
+      banmenHyouji("problem-grid", currentPuzzle);
+
+      document.getElementById("answer-grid").innerHTML = "";
+      document.getElementById("answer-button").textContent = "こたえ";
+    }
+
+    document
+      .getElementById("generate-button")
+      .addEventListener("click", atarashiiMondai);
+
+    document
+      .getElementById("answer-button")
+      .addEventListener("click", () => {
+        if (currentAnswer === null) {
+          return;
+        }
+
+        const answerGrid = document.getElementById("answer-grid");
+
+        if (answerGrid.children.length === 0) {
+          banmenHyouji("answer-grid", currentAnswer);
+          document.getElementById("answer-button").textContent =
+            "答えをかくす";
+        } else {
+          answerGrid.innerHTML = "";
+          document.getElementById("answer-button").textContent =
+            "こたえ";
+        }
+      });
+
+    atarashiiMondai();
+  </script>
+</body>
+</html>
